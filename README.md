@@ -27,7 +27,7 @@ donde el puerto que hemos escrito en nuestro archivo .env será el que colocarem
 
 nuestra app esta basada en la utilizacion de una sola ruta, es decir comandos, por ende el body de nuestro Postman debería llevar lo siguente:
 
-    -Key = **comands**
+    -Key = comands
     -Value = esto dependera de la acción que querramos realizar, esas son las siguentes:
 
 + Agregar un usuario: **register nombre correo usuario contraseña**

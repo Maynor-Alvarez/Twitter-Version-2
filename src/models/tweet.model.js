@@ -1,19 +1,17 @@
 'use strict'
 
 const mongoose = require('mongoose');
-const { schema } = require('./user.model');
 const Schema = mongoose.Schema;
 
 const tweetSchema = Schema({
     content: String,
-    user:String,
-    numberComments: Number,
-    comments: [{reply: String,
-                user: String}],
-    numberLikes: Number,
+    user: String,
+    noComments: Number,
+    noLikes: Number,
+    noRetweets: Number,
+    comments: [{reply: String,user: String}],
     likes: [{type: String}],
-    numberRetweets: Number,
-    retweet:[{type: Schema.Types.ObjectId, ref: 'tweet'}]
+    retweet:[{type: Schema.Types.ObjectId, ref: 'tweet'}],
 });
 
 

@@ -4,32 +4,32 @@ const User = require('../models/user.model');
 const Tweet = require('../models/tweet.model');
 const bcrypt = require('bcrypt-nodejs');
 const jwt = require('../services/jwt');
-const auth = require('../middlewares/auth');
+const auth = require('../middlewares/authenticated');
 
 
-function commands(req, res) {
+function command(req, res) {
     let user = new User();
     let tweet = new Tweet();
     let params = req.body;
     let arrUserData = Object.values(params);
-    let resp = arrUserData.toString().split(" ");
+    let response = arrUserData.toString().split(" ");
 
 
-    switch (resp[0]) {
+    switch (response[0]) {
         case 'register':
-            if (resp[1] != null && resp[2] != null && resp[3] != null && resp[4] != null) {
-                User.findOne({ $or: [{ email: resp[2] }, { username: resp[3] }] }, (err, userFind) => {
+            if (response[1] != null && response[2] != null && response[3] != null && response[4] != null) {
+                User.findOne({ $or: [{ email: response[2] }, { username: response[3] }] }, (err, userFind) => {
                     if (err) {
                         res.status(500).send({ message: 'Problema con el servidor' });
                     } else if (userFind) {
                         res.send({ message: 'El usuario o correo ingresado ya esatn registrados' });
                     } else {
-                        user.name = resp[1];
-                        user.email = resp[2];
-                        user.username = resp[3];
-                        user.password = resp[4];
+                        user.name = response[1];
+                        user.email = response[2];
+                        user.username = response[3];
+                        user.password = response[4];
 
-                        bcrypt.hash(resp[4], null, null, (err, hashPass) => {
+                        bcrypt.hash(response[4], null, null, (err, hashPass) => {
                             if (err) {
                                 res.status(500).send({ message: 'Error al encriptar' });
                             } else {
@@ -53,16 +53,16 @@ function commands(req, res) {
             break;
 
         case 'login':
-            if (resp[1] != null && resp[2] != null) {
-                User.findOne({ $or: [{ username: resp[1] }, { email: resp[1] }] }, (err, userFind) => {
+            if (response[1] != null && response[2] != null) {
+                User.findOne({ $or: [{ username: response[1] }, { email: response[1] }] }, (err, userFind) => {
                     if (err) {
                         res.status(500).send({ message: 'Problema con el servidor' });
                     } else if (userFind) {
-                        bcrypt.compare(resp[2], userFind.password, (err, checkPass) => {
+                        bcrypt.compare(response[2], userFind.password, (err, checkPass) => {
                             if (err) {
                                 res.status(500).send({ message: 'Error en el servidor.' });
                             } else if (checkPass) {
-                                if (resp[3] == 'true') {
+                                if (response[3] == 'true') {
                                     res.send({ token: jwt.createToken(userFind) });
                                 } else {
                                     res.send({ user: userFind });
@@ -81,8 +81,8 @@ function commands(req, res) {
             break;
 
         case 'add_tweet':
-            if (resp[1] != null) {
-                tweet.content = resp.join(' ');
+            if (response[1] != null) {
+                tweet.content = response.join(' ');
                 tweet.content = tweet.content.replace('add_tweet', '');
                 tweet.content = tweet.content.replace(' ', '');
                 tweet.user = auth.username;
@@ -114,17 +114,17 @@ function commands(req, res) {
             break;
 
         case 'edit_tweet':
-            if (resp[1] != null) {
-                if (resp[2] != null) {
+            if (response[1] != null) {
+                if (response[2] != null) {
                     let content = tweet.content;
-                    content = resp.join(' ');
+                    content = response.join(' ');
                     content = content.replace('edit_tweet', '');
-                    content = content.replace(resp[1], '');
+                    content = content.replace(response[1], '');
                     content = content.replace('  ', '');
 
                     if (content.length <= 280) {
                         let update = content;
-                        Tweet.findByIdAndUpdate(resp[1], { $set: { content: update } }, { new: true }, (err, tweetUpdated) => {
+                        Tweet.findByIdAndUpdate(response[1], { $set: { content: update } }, { new: true }, (err, tweetUpdated) => {
                             if (err) {
                                 res.status(500).send({ message: 'Problema con el servidor' });
                             } else if (tweetUpdated) {
@@ -145,8 +145,8 @@ function commands(req, res) {
             break;
 
         case 'delete_tweet':
-            if (resp[1] != null) {
-                Tweet.findByIdAndRemove(resp[1], (err, tweetFind) => {
+            if (response[1] != null) {
+                Tweet.findByIdAndRemove(response[1], (err, tweetFind) => {
                     if (err) {
                         res.status(500).send({ message: 'Problema con el servidor' });
                     } else if (tweetFind) {
@@ -169,12 +169,12 @@ function commands(req, res) {
             break;
 
         case 'view_tweets':
-            if (resp[1] != null) {
-                Tweet.findOne({ user: { $regex: resp[1], $options: 'i' } }, (err, tweetsFind) => {
+            if (response[1] != null) {
+                Tweet.findOne({ user: { $regex: response[1], $options: 'i' } }, (err, tweetsFind) => {
                     if (err) {
                         res.status(500).send({ message: 'Problema con el servidor' });
                     } else if (tweetsFind) {
-                        Tweet.find({ user: { $regex: resp[1], $options: 'i' } }, (err, tweets) => {
+                        Tweet.find({ user: { $regex: response[1], $options: 'i' } }, (err, tweets) => {
                             if (err) {
                                 res.status(500).send({ message: 'Error en el servidor' });
                             } else if (tweets) {
@@ -194,31 +194,33 @@ function commands(req, res) {
 
 
         case 'follow':
-            if (resp[1] != null) {
-                if (auth.username === resp[1]) {
+            if (response[1] != null) {
+                if (auth.username === response[1]) {
                     res.status(404).send({ message: 'imposible seguirte a ti mismo' });
                 } else {
-                    User.findOne({ username: resp[1], followers: auth.username }, (err, followerFind) => {
+                    User.findOne({ username: response[1], followers: auth.username }, (err, followerFind) => {
                         if (err) {
                             res.status(500).send({ message: 'Problema con el servidor' });
                         } else if (followerFind) {
                             res.send({ message: 'Ya sigues a este usuario' });
                         } else {
-                            User.findOneAndUpdate({ username: resp[1] }, { $push: { followers: auth.username } }, { new: true }, (err, followed) => {
+                            User.findOneAndUpdate({ username: response[1] }, { $push: { followers: auth.username } }, 
+                                { new: true }, (err, followed) => {
                                 if (err) {
                                     res.status(500).send({ message: 'Error en el servidor' });
                                 } else if (followed) {
-                                    User.findOneAndUpdate({ username: resp[1] }, { $inc: { noFollowers: 1 } }, { new: true }, (err, noFollowers) => {
+                                    User.findOneAndUpdate({ username: response[1] }, { $inc: { noFollowers: 1 } }, 
+                                        { new: true }, (err, noFollowers) => {
                                         if (err) {
                                             res.status(500).send({ message: 'Error en el servidor' });
                                         } else if (noFollowers) {
-                                            res.send({ message: 'siguiendo a ' + resp[1] });
+                                            res.send({ message: 'siguiendo a ' + response[1] });
                                         } else {
                                             res.status(404).send({ message: 'problema al aumentar la cantidad de seguidores.' });
                                         }
                                     });
                                 } else {
-                                    res.status(404).send({ message: 'Error al seguir a ' + resp[1] });
+                                    res.status(404).send({ message: 'Error al seguir a ' + response[1] });
                                 }
                             });
                         }
@@ -230,26 +232,28 @@ function commands(req, res) {
             break;
 
         case 'unfollow':
-            if (resp[1] != null) {
-                User.findOne({ username: resp[1], followers: auth.username }, (err, followerFind) => {
+            if (response[1] != null) {
+                User.findOne({ username: response[1], followers: auth.username }, (err, followerFind) => {
                     if (err) {
                         res.status(500).send({ message: 'Problema con el servidor' });
                     } else if (followerFind) {
-                        User.findOneAndUpdate({ username: resp[1] }, { $pull: { followers: auth.username } }, { new: true }, (err, followed) => {
+                        User.findOneAndUpdate({ username: response[1] }, { $pull: { followers: auth.username } },
+                             { new: true }, (err, followed) => {
                             if (err) {
                                 res.status(500).send({ message: 'Error en el servidor' });
                             } else if (followed) {
-                                User.findOneAndUpdate({ username: resp[1] }, { $inc: { noFollowers: -1 } }, { new: true }, (err, noFollowers) => {
+                                User.findOneAndUpdate({ username: response[1] }, { $inc: { noFollowers: -1 } },
+                                     { new: true }, (err, noFollowers) => {
                                     if (err) {
                                         res.status(500).send({ message: 'Error en el servidor' });
                                     } else if (noFollowers) {
-                                        res.send({ message: 'unFollow a ' + resp[1] });
+                                        res.send({ message: 'unFollow a ' + response[1] });
                                     } else {
                                         res.status(404).send({ message: 'No se ha podido decrementar la cantidad de seguidores.' });
                                     }
                                 });
                             } else {
-                                res.status(404).send({ message: 'problema al dejar de seguir a ' + resp[1] });
+                                res.status(404).send({ message: 'problema al dejar de seguir a ' + response[1] });
                             }
                         });
                     } else {
@@ -262,12 +266,13 @@ function commands(req, res) {
             break;
 
         case 'profile':
-            if (resp[1] != null) {
-                User.findOne({ username: { $regex: resp[1], $options: 'i' } }, (err, tweets) => {
+            if (response[1] != null) {
+                User.findOne({ username: { $regex: response[1], $options: 'i' } }, (err, tweets) => {
                     if (err) {
                         res.status(500).send({ message: 'Problema con el servidor' });
                     } else if (tweets) {
-                        User.find({ username: resp[1] }, { noFollowers: 1, noTweets: 1, _id: 0, email: 1, name: 1, followers: 1 }, (err, userFind) => {
+                        User.find({ username: response[1] }, { noFollowers: 1, noTweets: 1, _id: 0, email: 1, name: 1, followers: 1 },
+                            (err, userFind) => {
                             if (err) {
                                 res.status(500).send({ message: 'Error en el servidor.' });
                             } else if (userFind) {
@@ -286,8 +291,8 @@ function commands(req, res) {
             break;
 
         case 'like':
-            if (resp[1] != null) {
-                Tweet.findById(resp[1], (err, findTweet) => {
+            if (response[1] != null) {
+                Tweet.findById(response[1], (err, findTweet) => {
                     if (err) {
                         res.status(500).send({ message: 'Problema con el servidor' });
                     } else if (findTweet) {
@@ -301,20 +306,22 @@ function commands(req, res) {
                                     if (err) {
                                         res.status(500).send({ message: 'Problema con el servidor 2' });
                                     } else if (follower) {
-                                        Tweet.findOne({ _id: resp[1], likes: auth.username }, (err, likesFind) => {
+                                        Tweet.findOne({ _id: response[1], likes: auth.username }, (err, likesFind) => {
                                             if (err) {
                                                 res.status(500).send({ message: 'Error en el servidor' });
                                             } else if (likesFind) {
                                                 res.send({ message: 'este tweet ya tiene tu like' });
                                             } else {
-                                                Tweet.findByIdAndUpdate(resp[1], { $push: { likes: auth.username } }, { new: true }, (err, liked) => {
+                                                Tweet.findByIdAndUpdate(response[1], { $push: { likes: auth.username } },
+                                                    { new: true }, (err, liked) => {
                                                     if (err) {
                                                         res.status(500).send({ message: 'Problema con el servidor 3' });
                                                     } else if (liked) {
-                                                        Tweet.findByIdAndUpdate(resp[1], { $inc: { numberLikes: 1 } }, { new: true }, (err, noLikes) => {
+                                                        Tweet.findByIdAndUpdate(response[1], { $inc: { noLikes: 1 } },
+                                                            { new: true }, (err, numberOfLikes) => {
                                                             if (err) {
                                                                 res.status(500).send({ message: 'Error en el servidor' });
-                                                            } else if (noLikes) {
+                                                            } else if (numberOfLikes) {
                                                                 res.send({ message: 'le has dado like a este tweet' });
                                                             } else {
                                                                 res.status(404).send({ message: 'problema al aumentar la cantidad de likes' });
@@ -344,16 +351,16 @@ function commands(req, res) {
             break;
 
         case 'dislike':
-            if (resp[1] != null) {
-                Tweet.findOne({ _id: resp[1], likes: auth.username }, (err, likesFind) => {
+            if (response[1] != null) {
+                Tweet.findOne({ _id: response[1], likes: auth.username }, (err, likesFind) => {
                     if (err) {
                         res.status(500).send({ message: 'Problema con el servidor' });
                     } else if (likesFind) {
-                        Tweet.findByIdAndUpdate(resp[1], { $pull: { likes: auth.username } }, { new: true }, (err, liked) => {
+                        Tweet.findByIdAndUpdate(response[1], { $pull: { likes: auth.username } }, { new: true }, (err, liked) => {
                             if (err) {
                                 res.status(500).send({ message: 'Error en el servidor' });
                             } else if (liked) {
-                                Tweet.findByIdAndUpdate(resp[1], { $inc: { numberLikes: -1 } }, { new: true }, (err, noLikes) => {
+                                Tweet.findByIdAndUpdate(response[1], { $inc: { noLikes: -1 } }, { new: true }, (err, noLikes) => {
                                     if (err) {
                                         res.status(500).send({ message: 'Problema con el servidor 1' });
                                     } else if (noLikes) {
@@ -376,30 +383,31 @@ function commands(req, res) {
             break;
 
         case 'comment':
-            if (resp[1] != null) {
-                if (resp[2] != null) {
-                    Tweet.comments = resp.join(' ');
-                    Tweet.comments = Tweet.comments.replace('reply', '');
-                    Tweet.comments = Tweet.comments.replace(resp[1], '');
-                    Tweet.comments = Tweet.comments.replace('  ', '');
+            if (response[1] != null) {
+                if (response[2] != null) {
+                    Tweet.comments = response.join(' ');
+                    Tweet.comments = Tweet.comments.replace('comment', '');
+                    Tweet.comments = Tweet.comments.replace(response[1], '');
+                    Tweet.comments = Tweet.comments.replace('', '');
                     let comment = Tweet.comments;
 
                     if (Tweet.comments.length <= 280) {
-                        Tweet.findByIdAndUpdate(resp[1], { $inc: { numberComments: 1 } }, { new: true }, (err, tweetUpdate) => {
+                        Tweet.findByIdAndUpdate(response[1], { $inc: { noComments: 1 } }, { new: true }, (err, tweetUpdate) => {
                             if (err) {
                                 res.status(500).send({ message: 'Problema con el servidor' });
                             } else if (tweetUpdate) {
-                                Tweet.findByIdAndUpdate(resp[1], { $push: { comments: { reply: comment, user: auth.username } } }, { new: true }, (err, tweetSaved) => {
+                                Tweet.findByIdAndUpdate(response[1], { $push: { comments: { reply: comment, user: auth.username } } },
+                                     { new: true }, (err, tweetSaved) => {
                                     if (err) {
-                                        res.status(500).send({ message: 'Error en el servidor' });
+                                        res.status(500).send({ message: 'Error en el servidor'});
                                     } else if (tweetSaved) {
                                         res.send({ tweet: tweetSaved });
                                     } else {
-                                        res.status(404).send({ message: 'no se logro responder al tweet' });
+                                        res.status(404).send({ message: 'no se logro responder al tweet'});
                                     }
                                 });
                             } else {
-                                res.status(404).send({ message: 'no se logro responder al tweet' })
+                                res.status(404).send({ message: 'no se logro responder al tweet'})
                             }
                         });
                     } else {
@@ -414,10 +422,10 @@ function commands(req, res) {
             break;
 
         case 'retweet':
-            if (resp[1] != null) {
-                tweet.content = resp.join(' ');
+            if (response[1] != null) {
+                tweet.content = response.join(' ');
                 tweet.content = tweet.content.replace('retweet', '');
-                tweet.content = tweet.content.replace(resp[1], '');
+                tweet.content = tweet.content.replace(response[1], '');
                 tweet.content = tweet.content.replace('  ', '');
                 let content = tweet.content;
 
@@ -431,15 +439,17 @@ function commands(req, res) {
                             if (err) {
                                 res.status(500).send({ message: 'Error en el servidor' });
                             } else if (noTweets) {
-                                Tweet.findByIdAndUpdate(resp[1], { $inc: { numberRetweets: 1 } }, { new: true }, (err, noRetweet) => {
+                                Tweet.findByIdAndUpdate(response[1], { $inc: { noRetweets: 1 } }, { new: true },
+                                    (err, numberOfRetweet) => {
                                     if (err) {
                                         res.status(500).send({ message: 'Problema con el servidor 1' });
-                                    } else if (noRetweet) {
-                                        Tweet.findByIdAndUpdate(idTweet, { $set: { content: content, retweet: resp[1], user: auth.username } }, { new: true }, (err, retweet) => {
+                                    } else if (numberOfRetweet) {
+                                        Tweet.findByIdAndUpdate(idTweet, { $set: { content: content, retweet: response[1],
+                                            user: auth.username } }, { new: true }, (err, retweetComplete) => {
                                             if (err) {
                                                 res.status(500).send({ message: 'Error en el servidor' });
-                                            } else if (retweet) {
-                                                res.send({ tweet: retweet });
+                                            } else if (retweetComplete) {
+                                                res.send({ tweet: retweetComplete });
                                             } else {
                                                 res.send({ message: 'Error al retweetear' });
                                             }
@@ -469,5 +479,5 @@ function commands(req, res) {
 
 
 module.exports = {
-    commands
+    command
 }

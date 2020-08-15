@@ -8,10 +8,10 @@ const userSchema = Schema({
     email: String,
     username: String,
     password: String,
-    tweets: [{type: Schema.Types.ObjectId, ref: 'tweet'}],
     noTweets: Number,
+    noFollowers: Number,
+    tweets: [{type: Schema.Types.ObjectId, ref: 'tweet'}],
     followers: [{type: String}],
-    noFollowers: Number
 });
 
 module.exports = mongoose.model('user', userSchema);
